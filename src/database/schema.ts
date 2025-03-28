@@ -54,6 +54,9 @@ const verificationTable = pgTable("verification", {
 const taskTable = pgTable("tasks", {
   id: uuid("id").defaultRandom().primaryKey(),
   title: text("title").notNull(),
+  userId: text("user_id")
+    .notNull()
+    .references(() => userTable.id, { onDelete: "cascade" }),
   description: text("description"),
   completed: boolean().default(false),
   createdAt: timestamp("created_at").defaultNow(),
