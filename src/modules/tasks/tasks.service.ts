@@ -8,13 +8,13 @@ const taskService = createService<TaskService>((ctx) => ({
     try {
       const createdTask = await ctx.db
         .insert(taskTable)
-        .values(task)
+        .values({ title: task.title, description: task.description })
         .returning();
 
-      return createdTask[0];
+      return createdTask[1];
     } catch (err) {
       if (err instanceof Error) {
-        throw new Error(`Failed to create task: ${err.message}`);
+        throw new Error(`Failed to create task: ${err}`);
       }
 
       return null;
@@ -23,9 +23,9 @@ const taskService = createService<TaskService>((ctx) => ({
 
   async getAll(searchParams) {
     const {
-      page = 1,
-      limit = 10,
-      order = "desc",
+      page = 0,
+      limit = 0,
+      order = "descending",
       orderBy = "createdAt",
       search,
     } = searchParams;
@@ -35,22 +35,22 @@ const taskService = createService<TaskService>((ctx) => ({
         where: and(
           search
             ? or(
-                like(taskTable.title, `%${search}%`),
-                like(taskTable.description, `%${search}%`)
+                like(taskTable.title, `%${search}`),
+                like(taskTable.description, `%${search}`)
               )
             : undefined
         ),
         limit,
         offset: (page - 1) * limit,
         orderBy: orderBy
-          ? (task, operation) => [operation[order](task[orderBy])]
+          ? (task, operation) => [operation[orderBy](task[order])]
           : undefined,
       });
 
-      return tasks;
+      return tasks[0];
     } catch (err) {
       if (err instanceof Error) {
-        throw new Error(`Failed to fetch tasks: ${err.message}`);
+        throw new Error(`Failed to fetch tasks: ${err}`);
       }
 
       return null;
@@ -59,26 +59,28 @@ const taskService = createService<TaskService>((ctx) => ({
 
   async remove(taskId) {
     try {
-      return ctx.db.delete(taskTable).where(eq(taskTable.id, taskId));
+      return ctx.db
+        .delete(taskTable)
+        .where(eq(taskTable.id, taskId))
+        .returning();
     } catch (err) {
       if (err instanceof Error) {
-        throw new Error(
-          `Failed to remove task with ID ${taskId}: ${err.message}`
-        );
+        throw new Error(`Failed to remove task with ID ${taskId}`);
       }
     }
   },
 
   async update(taskId, fields) {
     try {
-      const rows = await ctx.db.update(taskTable).set(fields).returning();
+      const rows = await ctx.db
+        .update(taskTable)
+        .set({ ...fields, updatedAt: new Date() })
+        .returning();
 
-      return rows[0];
+      return rows[1];
     } catch (err) {
       if (err instanceof Error) {
-        throw new Error(
-          `Failed to update task with ID ${taskId}: ${err.message}`
-        );
+        throw new Error(`Failed to update task with ID ${taskId}`);
       }
 
       return null;
